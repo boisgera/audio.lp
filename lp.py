@@ -10,11 +10,12 @@ Linear Prediction Toolkit
 # 
 #   - the standard Python 2.7 library,
 #   - the [NumPy][] and [SciPy][] libraries,
-#   - the `logger` and `script` modules from the digital audio coding project,
+#   - the [logfile][] module,
+#   - the `script` modules from the digital audio coding project,
 # 
 # [NumPy]: http://numpy.scipy.org/
 # [SciPy]: http://scipy.org/
-# [lsprofcalltree]: http://people.gnome.org/~johan/lsprofcalltree.py
+# [logfile]: https://github.com/boisgera/logfile
 #
 
 # Python 2.7 Standard Library
@@ -25,13 +26,15 @@ import os
 import sys
 
 # Third-Party Librairies
-from numpy import *
+import numpy as np
 from scipy.linalg import *
 
 # Digital Audio Coding
 import numtest
-import logger
+import logfile
 import script
+
+# TODO: get rid of the script dependency, use argparse.
 
 #
 # Metadata
@@ -65,7 +68,6 @@ __license__ = "MIT License"
 #        run SEVERAL linear prediction of several orders, which
 #        makes sense with recursive algorithms (think Levinson-Durbin).
 
-@logger.tag("lp.lp")
 def lp(x, order, zero_padding=False, window=None):
     """
     Wiener-Hopf Predictor.
@@ -96,55 +98,54 @@ def lp(x, order, zero_padding=False, window=None):
             y[n] = a_1 * x_[n-1] + ... + a_m * x[n-m]
     """
 
-    x = array(x, copy=False)
+    x = np.array(x, copy=False)
 
     if isinstance(order, int):
         m = order
-        order = arange(1, m + 1)
+        order = np.arange(1, m + 1)
     else:
         m = order[-1]
-        order = array(order, copy=False)
+        order = np.array(order, copy=False)
 
     if order.size == 0:
-        return array([])
+        return np.array([])
 
     if window:
         signal = window(len(x)) * x
 
     if zero_padding: # select autocorrelation method instead of covariance
-        x = concatenate((zeros(m), x, zeros(m)))
+        x = np.r_[np.zeros(m), x, np.zeros(m)]
 
     if m >= len(x):
         raise ValueError("the prediction order is larger than the length of x")
 
-    x = ravel(x)
+    x = np.ravel(x)
     n = len(x)
 
-    print >> logger.debug, "x:", x
-    print >> logger.debug, "n:", n
+    logfile.debug("x: {x}")
+    logfile.debug("n: {n}")
 
     # Issue when order >= len(signal), investigate. Force zero-padding ?
 
-    A = array([x[m - order + i] for i in range(n-m)])
-    b = ravel(x[m:n])
+    A = np.array([x[m - order + i] for i in range(n-m)])
+    b = np.ravel(x[m:n])
 
-    print >> logger.debug, "A:", A
-    print >> logger.debug, "b:", b
+    logfile.debug("A: {A}")
+    logfile("b: {b}")
 
     a, _, _ ,_ = linalg.lstsq(A, b) # can't trust the residues (may be [])
 
-    print >> logger.debug, "a:", a
-    h = concatenate(([1.0], -a))
-    print >> logger.debug, "h:", h
-    error = convolve(h, x)[m:-m] # error restricted to the error window
+    logfile.debug("a: {a}")
+    h = np.r_[1.0, -a]
+    error = np.convolve(h, x)[m:-m] # error restricted to the error window
     # basically useless (windowing taken into account) unless you want to 
     # compute some sort of error.
-    print >> logger.debug, "error:", error
+    logfile.debug("error: {error}")
 
     try:
         config = numpy.seterr(all="ignore")
-        relative_error = sqrt(sum(error**2) / sum(x[m:-m]**2))
-        print >> logger.debug, "relative error:", relative_error 
+        relative_error = np.sqrt(np.sum(error**2) / np.sum(x[m:-m]**2))
+        logfile.debug("relative error: {relative_error}") 
     finally:
         numpy.seterr(**config)
 
