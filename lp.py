@@ -131,9 +131,9 @@ def lp(x, order, zero_padding=False, window=None):
     b = np.ravel(x[m:n])
 
     logfile.debug("A: {A}")
-    logfile("b: {b}")
+    logfile.debug("b: {b}")
 
-    a, _, _ ,_ = linalg.lstsq(A, b) # can't trust the residues (may be [])
+    a, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
 
     logfile.debug("a: {a}")
     h = np.r_[1.0, -a]
@@ -198,7 +198,7 @@ Test the stability of the prediction filter autocorrelation method
     >>> stable = []
     >>> for n in [1, 2, 3, 4, 5]:
     ...     a = lp(x, n, zero_padding=True)
-    ...     stable.append(all(abs(roots(a)) < 1))
+    ...     stable.append(all(abs(np.roots(a)) < 1))
     >>> all(stable)
     True
 
