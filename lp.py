@@ -47,6 +47,9 @@ __license__ = "MIT License"
 # ------------------------------------------------------------------------------
 #
 
+# TODO: have a look at <http://thomas-cokelaer.info/software/spectrum/html/contents.html>
+#       (the focus is on spectrum estimation, but it implements lp algs nonetheless).
+
 # TODO: study integration of Levison-Durbin, maybe Burg, etc.
 
 # TODO: when zero-padding is False, should check that order is not too big wrt
