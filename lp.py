@@ -11,7 +11,6 @@ Linear Prediction Toolkit
 #   - the standard Python 2.7 library,
 #   - the [NumPy][] and [SciPy][] libraries,
 #   - the [logfile][] module,
-#   - the `script` modules from the digital audio coding project,
 # 
 # [NumPy]: http://numpy.scipy.org/
 # [SciPy]: http://scipy.org/
@@ -19,6 +18,7 @@ Linear Prediction Toolkit
 #
 
 # Python 2.7 Standard Library
+import argparse
 import doctest
 import inspect
 import math
@@ -32,9 +32,6 @@ from scipy.linalg import *
 # Digital Audio Coding
 import numtest
 import logfile
-import script
-
-# TODO: get rid of the script dependency, use argparse.
 
 #
 # Metadata
@@ -55,6 +52,9 @@ __license__ = "MIT License"
 
 # TODO: study integration of Levison-Durbin, maybe Burg, etc.
 
+# TODO: get rid of zero_padding in favor of a method name: "covariance" or
+#       "autocorrelation" to begin with.
+
 # TODO: when zero-padding is False, should check that order is not too big wrt
 #       the window or raise an error.
 
@@ -67,6 +67,15 @@ __license__ = "MIT License"
 #        A sequence of orders means instead that you want to
 #        run SEVERAL linear prediction of several orders, which
 #        makes sense with recursive algorithms (think Levinson-Durbin).
+
+# TODO: (short-term): support only ONE numeric order, later a sequence of
+#       numeric orders (to be recursive algo friendly and output several
+#       a vectors or k vectors at once).
+
+# TODO: transfer levinson algorithm here.
+
+# TODO: support "output" string based on "a" and "k". Implement a to k and
+#       k to a converters.
 
 def lp(x, order, zero_padding=False, window=None):
     """
@@ -227,37 +236,22 @@ def test(verbose=True):
 # -----------------------------------------------------------------------------
 #
 
-def help():
-    """
-Return the following message:
-
-    Run the linear prediction test suite.    
-
-    usage:
-        python lp.y [OPTIONS]
-
-    options: -h, --help ........................ display help message and exit,
-             -t, --test ........................ run the module self tests,
-             -v, --verbose ..................... verbose mode.
-"""
-    return "\n".join(line[4:] for line in inspect.getdoc(help).splitlines()[2:])
-
 def main(args):
-    """Command-line interface entry point"""
-    options, args = script.parse("help test verbose", args)
-
-    if options.help:
-        print help()
-        sys.exit(0)
-
-    verbose = bool(options.verbose)
-    if options.test:
-        verbose = bool(options.verbose)
-        test_results = test(verbose=verbose)
-        sys.exit(test_results.failed)
-    else:
-        print help()
-        sys.exit(1)
+    "Command-line interface entry point"
+    description = "Run the linear prediction toolkit test suite."
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("-v", "--verbose", 
+                        action  = "count", 
+                        default = 0,
+                        help    = "display more information")
+    parser.add_argument("-s", "--silent",
+                        action  = "count", 
+                        default = 0,
+                        help    = "display less information")
+    args = parser.parse_args()
+    verbose = (args.verbose - args.silent) > 0
+    test_results = test(verbose=verbose)
+    sys.exit(test_results.failed)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
