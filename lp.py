@@ -135,8 +135,8 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
         the selection of `order = m` is therefore a shortcut for 
         `order = [1, 2, ..., m]`.
 
-      - `zero_padding`: `True` for the covariance method 
-         or `False` -- the default -- for the autocorrelation method.
+      - `method`: `"covariance"` or `"autocorrelation"`. 
+        The short names "cv" and "ac" are also valid.
       
       - `window`: function, optional: a window applied to the signal.
 
@@ -193,15 +193,15 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     if window:
         signal = window(len(x)) * x
 
-    if method.lower() in ("cv", "covariance"):
+    if method in ("cv", "covariance"):
         pass
-    elif method.lower() in ("ac", "autocorrelation"):
+    elif method in ("ac", "autocorrelation"):
         x = np.r_[np.zeros(m), x, np.zeros(m)]
     else:
         raise ValueError("invalid method name: {0!r}".format(method))
 
     # temporary (as long as LTZ is not implemented)
-    assert algo is None or algo.lower() in ("ls", "least squares") 
+    assert algo is None or algo in ("ls", "least squares") 
 
     if m >= len(x):
         raise ValueError("the prediction order is larger than the length of x")
