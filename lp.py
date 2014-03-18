@@ -128,15 +128,15 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     Arguments
     ---------
 
-      - `x`: the data, a sequence of floats.
+      - `x`: the time series, a sequence of floats.
  
       - `order`: prediction order if `order` is an `int`, 
         otherwise the list of non-zero indices of the predictor coefficients:
         the selection of `order = m` is therefore a shortcut for 
         `order = [1, 2, ..., m]`.
 
-      - `method`: `"covariance"` or `"autocorrelation"`. 
-        The short names "cv" and "ac" are also valid.
+      - `method`: `"covariance"` or `"autocorrelation"` (default: "covariance"). 
+        The short names `"cv"` and `"ac"` are also valid.
       
       - `window`: function, optional: a window applied to the signal.
 
@@ -290,7 +290,7 @@ Test the stability of the prediction filter autocorrelation method
     >>> x = [1.0, 2.0, 4.0, 8.0, 16.0]
     >>> stable = []
     >>> for n in [1, 2, 3, 4, 5]:
-    ...     a = lp(x, n, zero_padding=True)
+    ...     a = lp(x, n, method="autocorrelation")
     ...     stable.append(all(abs(np.roots(a)) < 1))
     >>> all(stable)
     True
