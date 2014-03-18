@@ -99,7 +99,7 @@ __license__ = "MIT License"
 def a2k(a):
     # source: Rabiner, Schafer
     # Q: also works for lacunary a's ? We don't care, just give it the full
-    #    a sequence, with the zeros, and it will work.
+    #    a sequence, with the zeros, and it will work. (And no, it doesn't work)
     m = len(a)
     A = np.zeros((m,m))
     A[m-1,:] = a
@@ -109,6 +109,9 @@ def a2k(a):
         # Rk: the external setting of numpy.seterr matters when |ki| = 1.0.
         A[i-1,js] = (A[i,js] + ki * A[i,i-1-js]  )/ (1 - ki * ki)
     return np.diagonal(A)
+
+def k2a(k):
+    raise NotImplementedError()
 
 def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     """
