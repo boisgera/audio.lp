@@ -47,6 +47,12 @@ __license__ = "MIT License"
 # ------------------------------------------------------------------------------
 #
 
+# TODO: see if the "masked" order can be made to work with autocorrelation.
+#       otherwise, I think I should drop it (at least for a while). It may
+#       but useful nonetheless for some applications, such as 3-tap filters
+#       but then may be made AGAIN available under a different name (mask ?)
+#       and only for the covariance method if it's the only one that works.
+
 # TODO: have a look at <http://thomas-cokelaer.info/software/spectrum/html/contents.html>
 #       (the focus is on spectrum estimation, but it implements lp algs nonetheless).
 
@@ -77,7 +83,7 @@ __license__ = "MIT License"
 # TODO: support "output" string based on "a" and "k". Implement a to k and
 #       k to a converters.
 
-def lp(x, order, zero_padding=False, window=None):
+def lp(x, order, method="covariance", algo=None, window=None):
     """
     Wiener-Hopf Predictor.
 
@@ -107,6 +113,10 @@ def lp(x, order, zero_padding=False, window=None):
             y[n] = a_1 * x_[n-1] + ... + a_m * x[n-m]
     """
 
+    # Rk: method is covariance or autocorrelation, algo = "LS" (least squares)
+    #     or "LTZ" (Levinson-Trench-Zohar). "LS" is applicable to both methods
+    #     but "LTZ" only to autocorrelation.
+
     x = np.array(x, copy=False)
 
     if isinstance(order, int):
@@ -122,8 +132,15 @@ def lp(x, order, zero_padding=False, window=None):
     if window:
         signal = window(len(x)) * x
 
-    if zero_padding: # select autocorrelation method instead of covariance
+    if method.lower() in ("cv", "covariance"):
+        pass
+    elif method.lower() in ("ac", "autocorrelation"):
         x = np.r_[np.zeros(m), x, np.zeros(m)]
+    else:
+        raise ValueError("invalid method name: {0!r}".format(method))
+
+    # temporary (as long as LTZ is not implemented)
+    assert algo is None or algo.lower() in ("ls", "least squares") 
 
     if m >= len(x):
         raise ValueError("the prediction order is larger than the length of x")
@@ -133,8 +150,6 @@ def lp(x, order, zero_padding=False, window=None):
 
     logfile.debug("x: {x}")
     logfile.debug("n: {n}")
-
-    # Issue when order >= len(signal), investigate. Force zero-padding ?
 
     A = np.array([x[m - order + i] for i in range(n-m)])
     b = np.ravel(x[m:n])
