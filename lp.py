@@ -101,8 +101,10 @@ __license__ = "MIT License"
 def a2k(a):
     # source: Rabiner, Schafer
     # Q: also works for lacunary a's ? We don't care, just give it the full
-    #    a sequence, with the zeros, and it will work. (And no, it doesn't work)
+    #    a sequence, with the zeros, and it will work. (And no, it doesn't work)    
     m = len(a)
+    if m == 0:
+        return np.array([])
     A = np.zeros((m,m))
     A[m-1,:] = a
     for i in np.arange(m-1, 0, -1): # m-1, m-2, ..., 1
@@ -115,13 +117,16 @@ def a2k(a):
 def k2a(k):
     # source: Rabiner, Schafer
     m = len(k)
+    if m == 0:
+        return np.array([])
     A = np.diag(k)
     for i in np.arange(m-1):
         js = np.arange(i+1)
         A[i+1,js] = A[i,js] - k[i+1] * A[i,i-js]
     return A[m-1,:].copy()
 
-def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
+def lp(x, order=None, mask=None, method="covariance", algo=None, window=None, 
+          returns="a"):
     """
     Linear Predictor Coefficients
 
@@ -130,20 +135,22 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
 
       - `x`: the time series, a sequence of floats.
  
-      - `order`: prediction order if `order` is an `int`, 
-        otherwise the list of non-zero indices of the predictor coefficients:
-        the selection of `order = m` is therefore a shortcut for 
-        `order = [1, 2, ..., m]`.
+      - `order`: prediction order, an integer.
+
+      - `mask`: a prediction coefficients mask, a sequence of bools, optional. 
+        The coefficient `a[i]` is forced to zero whenever `mask[i]` is `False`.
+        An unspecified mask corresponds to a sequence of `True` repeated `order`
+        times.
 
       - `method`: `"covariance"` or `"autocorrelation"` (default: "covariance"). 
         The short names `"cv"` and `"ac"` are also valid.
       
       - `window`: function, optional: a window applied to the signal.
 
-      - `returns`: a sequence of strings or comma-separated string of variable names.
-        When `returns` is a single string identifier, without a trailing comma, the
-        value with this name is returned ; otherwise the named value(s) is (are) 
-        returned as a tuple. Defaults to "a".
+      - `returns`: a sequence of names or comma-separated string of names.
+        When `returns` is a single name, without a trailing comma, 
+        the value with this name is returned ; otherwise the named value(s) 
+        is (are) returned as a tuple. Defaults to "a".
 
     Returns
     -------
@@ -164,6 +171,25 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     #     or "LTZ" (Levinson-Trench-Zohar). "LS" is applicable to both methods
     #     but "LTZ" only to autocorrelation.
 
+
+    if order is None and mask is None:
+        if mask is None:
+            raise ValueError("order (or mask) must be specified")
+    if mask is not None:
+        mask = np.array(mask, copy=False)
+        if len(np.shape(mask)) != 1 or mask.dtype != bool:
+           raise ValueError("mask is not a sequence of bools")
+        elif order is not None and len(mask) != order:
+            error = "the length of the mask ({0}) differs from order ({1})."
+            raise ValueError(error.format(len(mask), order))
+        else:
+            order = len(mask)
+    else:
+        mask = np.ones(order, dtype=bool)
+    m = order
+    indices = np.arange(1, m+1)[mask]
+    logfile.debug("indices: {indices}")
+
     unwrap_returns = False
     if isinstance(returns, str):
         returns_args = [name.strip() for name in returns.split(',')]
@@ -177,18 +203,14 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
         if name not in ("a", "k"):
             raise ValueError("invalid return value {0!r}".format(name))
 
+    x = np.array(x, dtype=np.float64, copy=False)
+    if len(np.shape(x)) != 1:
+        error = "the x argument should be a 1-dim. sequence of numbers"
+        raise ValueError(error)
 
-    x = np.array(x, copy=False) # TODO: check 1d.
-
-    if isinstance(order, int):
-        m = order
-        order = np.arange(1, m + 1)
-    else:
-        m = order[-1]
-        order = np.array(order, copy=False)
-
-    if order.size == 0:
-        return np.array([])
+    if order == 0:
+        a = np.array([])
+        # Arf, need to "goto" the end now.         
 
     if window:
         signal = window(len(x)) * x
@@ -206,23 +228,24 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     if m >= len(x):
         raise ValueError("the prediction order is larger than the length of x")
 
-    x = np.ravel(x)
     n = len(x)
 
     logfile.debug("x: {x}")
     logfile.debug("n: {n}")
 
-    A = np.array([x[m - order + i] for i in range(n-m)])
-    b = np.ravel(x[m:n])
+    A = np.array([x[m - indices + i] for i in range(n-m)])
+    b = x[m:n]
 
     logfile.debug("A: {A}")
     logfile.debug("b: {b}")
 
-    a_, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
-
-    # create the lacunary a from the dense one
-    a = np.zeros(m)
-    a[order-1] = a_
+    if np.shape(A)[1] > 0:
+        a_, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
+        # create the lacunary coefficient array from the dense one
+        a = np.zeros(m)
+        a[indices-1] = a_
+    else:
+        a = np.array([])
 
     logfile.debug("a: {a}")
     h = np.r_[1.0, -a]
@@ -302,11 +325,11 @@ Compute predictor with selected non-zero coefficients:
     >>> x = [-1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0]
     >>> lp(x, 2) # doctest: +NUMBER
     [0.0, -1.0]
-    >>> lp(x, [2]) # doctest: +NUMBER
+    >>> lp(x, order=2, mask=[False, True]) # doctest: +NUMBER
     [0.0, -1.0]
     >>> lp(x, 4)[1::2] # doctest: +NUMBER
     [-0.5, 0.5]
-    >>> lp(x, [4]) # doctest: +NUMBER
+    >>> lp(x, order=4, mask=[False, False, False, True]) # doctest: +NUMBER
     [0.0, 0.0, 0.0, 1.0]
     """
 
