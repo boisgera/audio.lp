@@ -10,11 +10,12 @@ Linear Prediction Toolkit
 # 
 #   - the standard Python 2.7 library,
 #   - the [NumPy][] and [SciPy][] libraries,
-#   - the [logfile][] module,
+#   - the [logfile][] and [numtest][] modules.
 # 
 # [NumPy]: http://numpy.scipy.org/
 # [SciPy]: http://scipy.org/
 # [logfile]: https://github.com/boisgera/logfile
+# [numtest]: https://github.com/boisgera/numtest
 #
 
 # Python 2.7 Standard Library
