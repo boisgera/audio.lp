@@ -162,9 +162,9 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
             returns_args = returns_args[:-1]
     else:
         returns_args = returns
-    for name in return_args:
+    for name in returns_args:
         if name not in ("a", "k"):
-            raise ValueError()
+            raise ValueError("invalid return value {0!r}".format(name))
 
 
     x = np.array(x, copy=False) # TODO: check 1d.
