@@ -9,7 +9,7 @@ Linear Prediction Toolkit
 # ------------------------------------------------------------------------------
 # 
 #   - the standard Python 2.7 library,
-#   - the [NumPy][] and [SciPy][] libraries,
+#   - the [NumPy][] library,
 #   - the [logfile][] and [numtest][] modules.
 # 
 # [NumPy]: http://numpy.scipy.org/
@@ -28,7 +28,6 @@ import sys
 
 # Third-Party Librairies
 import numpy as np
-from scipy.linalg import *
 
 # Digital Audio Coding
 import numtest
@@ -233,11 +232,11 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     logfile.debug("error: {error}")
 
     try:
-        config = numpy.seterr(all="ignore")
+        config = np.seterr(all="ignore")
         relative_error = np.sqrt(np.sum(error**2) / np.sum(x[m:-m]**2))
         logfile.debug("relative error: {relative_error}") 
     finally:
-        numpy.seterr(**config)
+        np.seterr(**config)
 
     if "k" in returns_args:
         k = a2k(a)
