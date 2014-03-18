@@ -95,6 +95,8 @@ __license__ = "MIT License"
 #       False, False] instead or [1, 0, 0, 0] (or the opposite) ? With the
 #       opposite, u say "Yes" for all coefficients that you have the right
 #       to use for the prediction. The term "mask" is ambiguous in this respect ...
+#       Rk: the convention with True for "possibly non zero" allows to select
+#       easily the non-zero coefficients from the lacunary vector a.
 
 def a2k(a):
     # source: Rabiner, Schafer
@@ -111,16 +113,22 @@ def a2k(a):
     return np.diagonal(A)
 
 def k2a(k):
-    raise NotImplementedError()
+    # source: Rabiner, Schafer
+    m = len(k)
+    A = np.diag(k)
+    for i in np.arange(m-1):
+        js = np.arange(i+1)
+        A[i+1,js] = A[i,js] - k[i+1] * A[i,i-js]
+    return A[m-1,:].copy()
 
 def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     """
-    Wiener-Hopf Predictor.
+    Linear Predictor Coefficients
 
     Arguments
     ---------
 
-      - `x`: the signal x, a sequence of floats.
+      - `x`: the data, a sequence of floats.
  
       - `order`: prediction order if `order` is an `int`, 
         otherwise the list of non-zero indices of the predictor coefficients:
@@ -211,6 +219,8 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     logfile.debug("b: {b}")
 
     a, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
+
+    # TODO: fill a with zeros if necessary.
 
     logfile.debug("a: {a}")
     h = np.r_[1.0, -a]
