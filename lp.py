@@ -110,7 +110,7 @@ def a2k(a):
         A[i-1,js] = (A[i,js] + ki * A[i,i-1-js]  )/ (1 - ki * ki)
     return np.diagonal(A)
 
-def lp(x, order, method="covariance", algo=None, window=None):
+def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     """
     Wiener-Hopf Predictor.
 
@@ -129,22 +129,45 @@ def lp(x, order, method="covariance", algo=None, window=None):
       
       - `window`: function, optional: a window applied to the signal.
 
+      - `returns`: a sequence of strings or comma-separated string of variable names.
+        When `returns` is a single string identifier, without a trailing comma, the
+        value with this name is returned ; otherwise the named value(s) is (are) 
+        returned as a tuple. Defaults to "a".
 
     Returns
     -------
     
+    The set of returned values is selected by the `returns` argument among:
+
       - `a`: the array of prediction coefficients `[a_1, ..., a_m]`.
 
         The predicted value `y[n]` of `x[n]` should be computed with:
  
             y[n] = a_1 * x_[n-1] + ... + a_m * x[n-m]
+
+      - `k`: the array of reflection coefficients `[k_1, ..., k_m]`.
+
     """
 
     # Rk: method is covariance or autocorrelation, algo = "LS" (least squares)
     #     or "LTZ" (Levinson-Trench-Zohar). "LS" is applicable to both methods
     #     but "LTZ" only to autocorrelation.
 
-    x = np.array(x, copy=False)
+    unwrap_returns = False
+    if isinstance(returns, str):
+        returns_args = [name.strip() for name in returns.split(',')]
+        if len(returns_args) == 1:
+            unwrap_returns = True
+        if len(returns_args) >= 1 and not returns_args[-1]: # trailing comma
+            returns_args = returns_args[:-1]
+    else:
+        returns_args = returns
+    for name in return_args:
+        if name not in ("a", "k"):
+            raise ValueError()
+
+
+    x = np.array(x, copy=False) # TODO: check 1d.
 
     if isinstance(order, int):
         m = order
@@ -200,7 +223,13 @@ def lp(x, order, method="covariance", algo=None, window=None):
     finally:
         numpy.seterr(**config)
 
-    return a
+    if "k" in returns_args:
+        k = a2k(a)
+
+    returns = tuple([locals()[arg] for arg in returns_args])
+    if unwrap_returns:
+        returns = returns[0]
+    return returns
 
 #
 # Unit Tests
