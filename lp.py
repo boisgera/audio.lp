@@ -83,6 +83,33 @@ __license__ = "MIT License"
 # TODO: support "output" string based on "a" and "k". Implement a to k and
 #       k to a converters.
 
+# TODO: a with some values set to 0. Return the full vector instead (with 0 in
+#       the appropriate places). Would make the return value structure more 
+#       orthogonal to the computation options, and a2k a no-brainer). Then,
+#       how do we specify the coefficients that are 0 ? Use a convention similar
+#       to numpy mask arrays ? for example set mask=[1, 0, 0, 0] if you want
+#       a 4-order prediction with a_1 = 0 ? Then order becomes optional ...
+#       Other possible conventions are "0" instead of "1" to denote the locations
+#       of the zeros, or a list of the zero coefficients (or the opposite). Try
+#       one convention, then try it. Maybe multiple conventions ? [True, False,
+#       False, False] instead or [1, 0, 0, 0] (or the opposite) ? With the
+#       opposite, u say "Yes" for all coefficients that you have the right
+#       to use for the prediction. The term "mask" is ambiguous in this respect ...
+
+def a2k(a):
+    # source: Rabiner, Schafer
+    # Q: also works for lacunary a's ? We don't care, just give it the full
+    #    a sequence, with the zeros, and it will work.
+    m = len(a)
+    A = np.zeros((m,m))
+    A[m-1,:] = a
+    for i in np.arange(m-1, 0, -1): # m-1, m-2, ..., 1
+        ki = A[i, i]
+        js = np.arange(i)
+        # Rk: the external setting of numpy.seterr matters when |ki| = 1.0.
+        A[i-1,js] = (A[i,js] + ki * A[i,i-1-js]  )/ (1 - ki * ki)
+    return np.diagonal(A)
+
 def lp(x, order, method="covariance", algo=None, window=None):
     """
     Wiener-Hopf Predictor.
