@@ -218,9 +218,11 @@ def lp(x, order, method="covariance", algo=None, window=None, returns="a"):
     logfile.debug("A: {A}")
     logfile.debug("b: {b}")
 
-    a, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
+    a_, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
 
-    # TODO: fill a with zeros if necessary.
+    # create the lacunary a from the dense one
+    a = np.zeros(m)
+    a[order-1] = a_
 
     logfile.debug("a: {a}")
     h = np.r_[1.0, -a]
@@ -301,11 +303,11 @@ Compute predictor with selected non-zero coefficients:
     >>> lp(x, 2) # doctest: +NUMBER
     [0.0, -1.0]
     >>> lp(x, [2]) # doctest: +NUMBER
-    [-1.0]
+    [0.0, -1.0]
     >>> lp(x, 4)[1::2] # doctest: +NUMBER
     [-0.5, 0.5]
     >>> lp(x, [4]) # doctest: +NUMBER
-    [1.0]
+    [0.0, 0.0, 0.0, 1.0]
     """
 
 def test(verbose=True):
