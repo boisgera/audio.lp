@@ -306,8 +306,22 @@ def lp(x, order=None, mask=None, method="covariance", window=None, returns="a"):
         if "k" in returns_args:
             k = a2k(a)
 
-    elif method == "Levison":
-        pass # TODO.
+    elif method == "Levinson":
+        r = np.convolve(x, x[::-1])[n-1:] # r[i], for i up to N-1.
+                                          # if more is needed, pad with zeros.
+        E = np.zeros(order + 1)
+        k = np.zeros(order)
+        a = np.zeros((order, order))
+
+        E[0] = r[0]
+        for i in np.arange(1, order + 1):
+            k[i-1] = (r[i] - np.dot(a[i-2,0:i-1], r[i-1:0:-1])) / E[i-1]
+            a[i-1,i-1] = k[i-1]
+            for j in np.arange(i-1):
+                a[i-1,j] = a[i-2,j] - k[i-1] * a[i-2, i-2-j]
+            E[i] = (1.0 - k[i-1]*k[i-1]) * E[i-1]
+
+        a = a[-1, :]
 
 
     returns = tuple([locals()[arg] for arg in returns_args])
