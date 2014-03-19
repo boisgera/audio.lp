@@ -238,7 +238,7 @@ def lp(x, order=None, mask=None, method="covariance", window=None, returns="a"):
     else:
         raise ValueError(error)
 
-    using_mask = not all(mask == np.ones(order, dtype=bool)
+    using_mask = not all(mask == np.ones(order, dtype=bool))
     if algo is None:
         # select automatically the appropriate default algorithm
         if method == "covariance" or using_mask:
@@ -261,9 +261,7 @@ def lp(x, order=None, mask=None, method="covariance", window=None, returns="a"):
              error = "lacunary coefficients not supported with Levinson algorithm"
              raise NotImplementedError(error)
 
-
-
-    if method == "least squares":
+    if algo == "least squares":
         if algo == "autocorrelation":
             x = np.r_[np.zeros(m), x, np.zeros(m)]
 
@@ -306,18 +304,22 @@ def lp(x, order=None, mask=None, method="covariance", window=None, returns="a"):
         if "k" in returns_args:
             k = a2k(a)
 
-    elif method == "Levinson":
-        r = np.convolve(x, x[::-1])[n-1:] # r[i], for i up to N-1.
-                                          # if more is needed, pad with zeros.
-        E = np.zeros(order + 1)
-        k = np.zeros(order)
-        a = np.zeros((order, order))
+    elif algo == "Levinson":
+        n = len(x)
+        
+        r = np.convolve(x, x[::-1])[n-1:] # r[i], for i = 0, ..., n-1.
+        if order + 1 > n:
+            r = np.r_[r, np.zeros(order + 1 - n)]
+
+        E = np.zeros(m + 1)
+        k = np.zeros(m)
+        a = np.zeros((m, m))
 
         E[0] = r[0]
-        for i in np.arange(1, order + 1):
+        for i in np.arange(1, m + 1):
             k[i-1] = (r[i] - np.dot(a[i-2,0:i-1], r[i-1:0:-1])) / E[i-1]
             a[i-1,i-1] = k[i-1]
-            for j in np.arange(i-1):
+            for j in np.arange(i-1): # TODO: vectorize this inner loop
                 a[i-1,j] = a[i-2,j] - k[i-1] * a[i-2, i-2-j]
             E[i] = (1.0 - k[i-1]*k[i-1]) * E[i-1]
 
