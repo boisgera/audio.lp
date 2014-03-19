@@ -24,6 +24,7 @@ import doctest
 import inspect
 import math
 import os
+import re
 import sys
 
 # Third-Party Librairies
@@ -125,8 +126,7 @@ def k2a(k):
         A[i+1,js] = A[i,js] - k[i+1] * A[i,i-js]
     return A[m-1,:].copy()
 
-def lp(x, order=None, mask=None, method="covariance", algo=None, window=None, 
-          returns="a"):
+def lp(x, order=None, mask=None, method="covariance", window=None, returns="a"):
     """
     Linear Predictor Coefficients
 
@@ -143,7 +143,7 @@ def lp(x, order=None, mask=None, method="covariance", algo=None, window=None,
         times.
 
       - `method`: `"covariance"` or `"autocorrelation"` (default: "covariance"). 
-        The short names `"cv"` and `"ac"` are also valid.
+        The acronyms `"CV"` and `"AC"` are also valid.
       
       - `window`: function, optional: a window applied to the signal.
 
@@ -215,54 +215,100 @@ def lp(x, order=None, mask=None, method="covariance", algo=None, window=None,
     if window:
         signal = window(len(x)) * x
 
-    if method in ("cv", "covariance"):
-        pass
-    elif method in ("ac", "autocorrelation"):
-        x = np.r_[np.zeros(m), x, np.zeros(m)]
-    else:
-        raise ValueError("invalid method name: {0!r}".format(method))
 
-    # temporary (as long as LTZ is not implemented)
-    assert algo is None or algo in ("ls", "least squares") 
+    # TODO: externalize the method / algo selection and checking.
+    #       (warning: we need a "using_mask" flag, build it before)
+    #
+    # Method / Algorithm Selection
+    # -------------------------------------------------------------
+    if method is None:
+        method = "covariance"
 
-    if m >= len(x):
-        raise ValueError("the prediction order is larger than the length of x")
-
-    n = len(x)
-
-    logfile.debug("x: {x}")
-    logfile.debug("n: {n}")
-
-    A = np.array([x[m - indices + i] for i in range(n-m)])
-    b = x[m:n]
-
-    logfile.debug("A: {A}")
-    logfile.debug("b: {b}")
-
-    if np.shape(A)[1] > 0:
-        a_, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
-        # create the lacunary coefficient array from the dense one
-        a = np.zeros(m)
-        a[indices-1] = a_
-    else:
-        a = np.array([])
-
-    logfile.debug("a: {a}")
-    h = np.r_[1.0, -a]
-    error = np.convolve(h, x)[m:-m] # error restricted to the error window
-    # basically useless (windowing taken into account) unless you want to 
-    # compute some sort of error.
-    logfile.debug("error: {error}")
-
+    # pattern: identifier followed by optional, parenthesized identifier
+    pattern = r"([a-zA-Z]+)\s*(?:\(([a-zA-Z]+)\))*"
+    error = "method should be 'covariance' or 'autocorrelation'"
     try:
-        config = np.seterr(all="ignore")
-        relative_error = np.sqrt(np.sum(error**2) / np.sum(x[m:-m]**2))
-        logfile.debug("relative error: {relative_error}") 
-    finally:
-        np.seterr(**config)
+        method, algo = re.match(pattern, method).groups()
+    except AttributeError:
+        raise ValueError(error)
+    if method in ("covariance", "CV"):
+        method = "covariance"
+    elif method in ("autocorrelation", "AC"):
+        method = "autocorrelation"
+    else:
+        raise ValueError(error)
 
-    if "k" in returns_args:
-        k = a2k(a)
+    using_mask = not all(mask == np.ones(order, dtype=bool)
+    if algo is None:
+        # select automatically the appropriate default algorithm
+        if method == "covariance" or using_mask:
+            algo = "least squares"
+        else:
+            algo = "Levinson"
+    else:
+        # check and normalize the manual algorithm selection
+        if algo in ("least squares", "LS"):
+            algo = "least squares"
+        elif algo in ("Levinson", "LTZ"):
+            algo = "Levinson" 
+        else:
+            error = "only 'least squares' and 'Levison' algorithms are supported"
+            raise ValueError(error)
+        if method == "covariance" and algo == "Levinson":
+            error = "Levinson algorithm cannot be applied to covariance method"  
+            raise ValueError(error)
+        elif algo == "Levinson" and using_mask:
+             error = "lacunary coefficients not supported with Levinson algorithm"
+             raise NotImplementedError(error)
+
+
+
+    if method == "least squares":
+        if algo == "autocorrelation":
+            x = np.r_[np.zeros(m), x, np.zeros(m)]
+
+        if m >= len(x):
+            raise ValueError("the prediction order is larger than the length of x")
+
+        n = len(x)
+
+        logfile.debug("x: {x}")
+        logfile.debug("n: {n}")
+
+        A = np.array([x[m - indices + i] for i in range(n-m)])
+        b = x[m:n]
+
+        logfile.debug("A: {A}")
+        logfile.debug("b: {b}")
+
+        if np.shape(A)[1] > 0:
+            a_, _, _ ,_ = np.linalg.lstsq(A, b) # can't trust the residues (may be [])
+            # create the lacunary coefficient array from the dense one
+            a = np.zeros(m)
+            a[indices-1] = a_
+        else:
+            a = np.array([])
+
+        logfile.debug("a: {a}")
+        h = np.r_[1.0, -a]
+        error = np.convolve(h, x)[m:-m] # error restricted to the error window
+        # basically useless (windowing taken into account) unless you want to 
+        # compute some sort of error.
+        logfile.debug("error: {error}")
+
+        try:
+            config = np.seterr(all="ignore")
+            relative_error = np.sqrt(np.sum(error**2) / np.sum(x[m:-m]**2))
+            logfile.debug("relative error: {relative_error}") 
+        finally:
+            np.seterr(**config)
+
+        if "k" in returns_args:
+            k = a2k(a)
+
+    elif method == "Levison":
+        pass # TODO.
+
 
     returns = tuple([locals()[arg] for arg in returns_args])
     if unwrap_returns:
