@@ -44,65 +44,23 @@ __version__ = u"trunk"
 __license__ = "MIT License"
 
 #
-# Linear Prediction -- Wiener-Hopf Filter
+# Linear Prediction
 # ------------------------------------------------------------------------------
 #
 
-# TODO: see if the "masked" order can be made to work with autocorrelation.
-#       otherwise, I think I should drop it (at least for a while). It may
-#       but useful nonetheless for some applications, such as 3-tap filters
-#       but then may be made AGAIN available under a different name (mask ?)
-#       and only for the covariance method if it's the only one that works.
 
 # TODO: have a look at <http://thomas-cokelaer.info/software/spectrum/html/contents.html>
 #       (the focus is on spectrum estimation, but it implements lp algs nonetheless).
 
-# TODO: study integration of Levison-Durbin, maybe Burg, etc.
-
-# TODO: get rid of zero_padding in favor of a method name: "covariance" or
-#       "autocorrelation" to begin with.
-
-# TODO: when zero-padding is False, should check that order is not too big wrt
-#       the window or raise an error.
+# TODO: study the addition of a third method: Burg's method.
 
 # TODO: to make a 3-tap ltp prediction, support for observation window in lp
-#       would be handy.
+#       prediction error would be handy. Is that too complex ?
 
-# Rk: window is probaly not worth it, it's an orthogonal concern.
 
-# order: the overloading for forbidden indexes kind of sucks.
-#        A sequence of orders means instead that you want to
-#        run SEVERAL linear prediction of several orders, which
-#        makes sense with recursive algorithms (think Levinson-Durbin).
-
-# TODO: (short-term): support only ONE numeric order, later a sequence of
-#       numeric orders (to be recursive algo friendly and output several
-#       a vectors or k vectors at once).
-
-# TODO: transfer levinson algorithm here.
-
-# TODO: support "output" string based on "a" and "k". Implement a to k and
-#       k to a converters.
-
-# TODO: a with some values set to 0. Return the full vector instead (with 0 in
-#       the appropriate places). Would make the return value structure more 
-#       orthogonal to the computation options, and a2k a no-brainer). Then,
-#       how do we specify the coefficients that are 0 ? Use a convention similar
-#       to numpy mask arrays ? for example set mask=[1, 0, 0, 0] if you want
-#       a 4-order prediction with a_1 = 0 ? Then order becomes optional ...
-#       Other possible conventions are "0" instead of "1" to denote the locations
-#       of the zeros, or a list of the zero coefficients (or the opposite). Try
-#       one convention, then try it. Maybe multiple conventions ? [True, False,
-#       False, False] instead or [1, 0, 0, 0] (or the opposite) ? With the
-#       opposite, u say "Yes" for all coefficients that you have the right
-#       to use for the prediction. The term "mask" is ambiguous in this respect ...
-#       Rk: the convention with True for "possibly non zero" allows to select
-#       easily the non-zero coefficients from the lacunary vector a.
 
 def a2k(a):
     # source: Rabiner, Schafer
-    # Q: also works for lacunary a's ? We don't care, just give it the full
-    #    a sequence, with the zeros, and it will work. (And no, it doesn't work)    
     m = len(a)
     if m == 0:
         return np.array([])
@@ -166,11 +124,6 @@ def lp(x, order=None, mask=None, method="covariance", window=None, returns="a"):
       - `k`: the array of reflection coefficients `[k_1, ..., k_m]`.
 
     """
-
-    # Rk: method is covariance or autocorrelation, algo = "LS" (least squares)
-    #     or "LTZ" (Levinson-Trench-Zohar). "LS" is applicable to both methods
-    #     but "LTZ" only to autocorrelation.
-
 
     if order is None and mask is None:
         if mask is None:
