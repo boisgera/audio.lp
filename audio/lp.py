@@ -31,7 +31,6 @@ import sys
 import numpy as np
 
 # Digital Audio Coding
-import numtest
 import logfile
 
 #
@@ -52,7 +51,16 @@ __license__ = "MIT License"
 # TODO: have a look at <http://thomas-cokelaer.info/software/spectrum/html/contents.html>
 #       (the focus is on spectrum estimation, but it implements lp algs nonetheless).
 
-# TODO: study the addition of a third method: Burg's method.
+# TODO: study the addition of a third method: Burg's method. How to put "Yule-Walker"
+#       into the picture ? Is it the name for an already implemented method ? 
+#       In my memory, Yule-Walker is expressed in terms of probabilistic data,
+#       hence a concrete implementation has to select estimators. However the
+#       mathematical properties of the correlations do give AFAICT a Toeplitz
+#       structure to the system to be solved, hence, we are at least similar
+#       to the autocorrelation method. Well, no, not necessarily, the classic
+#       covariance estimator use only "real" data hence do not match the 
+#       covariance method, this is somehow an hybrid betweeen AC and CV ...
+#       What about Modified Covariance ?
 
 # TODO: to make a 3-tap ltp prediction, support for observation window in lp
 #       prediction error would be handy. Is that too complex ?
@@ -347,36 +355,4 @@ Compute predictor with selected non-zero coefficients:
     >>> lp(x, order=4, mask=[False, False, False, True]) # doctest: +NUMBER
     [0.0, 0.0, 0.0, 1.0]
     """
-
-def test(verbose=True):
-    """
-    Run the unit tests
-    """
-    import doctest
-    return doctest.testmod(verbose=verbose)
-
-#
-# Command-Line Interface
-# -----------------------------------------------------------------------------
-#
-
-def main(args):
-    "Command-line interface entry point"
-    description = "Run the linear prediction toolkit test suite."
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("-v", "--verbose", 
-                        action  = "count", 
-                        default = 0,
-                        help    = "display more information")
-    parser.add_argument("-s", "--silent",
-                        action  = "count", 
-                        default = 0,
-                        help    = "display less information")
-    args = parser.parse_args()
-    verbose = (args.verbose - args.silent) > 0
-    test_results = test(verbose=verbose)
-    sys.exit(test_results.failed)
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
 
